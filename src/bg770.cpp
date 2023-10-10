@@ -22,6 +22,8 @@
  */
 /** @brief BG770のサブスクライブペイロード位置（+QMTRECV: <client_idx>,<msg_id>,<topic>,<payload>） */
 #define BG770_SUB_PAYLOAD_INDEX 4
+/** @brief コマンドの最大サイズ */
+#define COMMAND_SIZE 64
 
 /**************************************************************************************************
  * TYPEDEFS
@@ -557,7 +559,9 @@ api_status_t validate_response_qmtconn(const char *content, uint16_t times)
 const char *create_command_qmtsub(void)
 {
   /* +QMTSUB: (0-5),(1-65535),<topic>,(0-2) */
-  static char command[] = "AT+QMTSUB=0,1,\"";
+  static char command[COMMAND_SIZE];
+  strncpy(command,"",COMMAND_SIZE);
+  strcpy(command,"AT+QMTSUB=0,1,\"");
   strcat(command,SUBSCRIBE_TOPIC);
   strcat(command,"\",1\r");
   return command;
@@ -584,7 +588,9 @@ api_status_t validate_response_qmtsub(const char *content, uint16_t times)
 const char *create_command_qmtuns(void)
 {
   /* +QMTSUB: (0-5),(1-65535),<topic>,(0-2) */
-  static char command[] = "AT+QMTUNS=0,1,\"";
+  static char command[COMMAND_SIZE];
+  strncpy(command,"",COMMAND_SIZE);
+  strcpy(command,"AT+QMTUNS=0,1,\"");
   strcat(command,SUBSCRIBE_TOPIC);
   strcat(command,"\"\r");
 
@@ -657,7 +663,9 @@ String RxData_Analize(String RxData){
 /*************************************************************************************************/
 const char *create_command_qmtpub(void)
 {
-  static char command[] = "AT+QMTPUB=0,1,1,0,\"";
+  static char command[COMMAND_SIZE];
+  strncpy(command,"",COMMAND_SIZE);
+  strcpy(command,"AT+QMTPUB=0,1,1,0,\"");
   strcat(command,PUBLISH_TOPIC);
   strcat(command,"\"\r");
 

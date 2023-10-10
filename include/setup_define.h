@@ -14,7 +14,7 @@
  * CONSTANTS
  */
 /** @brief  デバッグ用プリントモード */
-#define DEBUG_PRINT
+//#define DEBUG_PRINT
 /** @brief  SIMモードの定義（eSIM or SIM） */
 #define eSIMMODE
 //#define SIMMODE

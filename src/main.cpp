@@ -47,9 +47,10 @@ void loop() {
   /* BG770が初期化コマンドシーケンス中なら、サブスクライブ状態になるまで、ループ */
   if(bg_state == BG770_STATE_INIT_COMMAND_SEQUENCE){
     while(bg_state != BG770_STATE_SUBSCRIBE){
-      if(init_command_sequence_task()== API_STATUS_FAIL){ bg770_reset(); };
+      if(init_command_sequence_task() == API_STATUS_FAIL){ bg770_reset(); };
       delay(1);
     }
+    Serial.println("Subscribe Start");
   }
 
   /* bg770からの受信待ち */
@@ -58,28 +59,31 @@ void loop() {
     /* データ受信 */
     String RxData = bg770_RxDataGet();
     
-    /* サブスクライブした場合のBG770のレスポンス */
-    if(RxData.startsWith("+QMTRECV: 0")){
-      
-      /* 受信データの解析 */
-      String Subscribe_payload = RxData_Analize(RxData);
-      Serial.println("Subscribe Payload[" + String(Subscribe_payload) + "]");
+    /* NULLは無視 */
+    if(RxData != ""){
+      /* サブスクライブした場合のBG770のレスポンス */
+      if(RxData.startsWith("+QMTRECV: 0")){
+        
+        /* 受信データの解析 */
+        String Subscribe_payload = RxData_Analize(RxData);
+        Serial.println("Subscribe Payload[" + String(Subscribe_payload) + "]");
 
-      /* サブスクライブの中止 */
-      if(execute(&unsubscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
+        /* サブスクライブの中止 */
+        if(execute(&unsubscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
       
-      /* サブスクライブに対する返事（パブリッシュ）の生成*/
-      Publish_length = publish_payload_build((char *)Publish_payload);
+        /* サブスクライブに対する返事（パブリッシュ）の生成*/
+        Publish_length = publish_payload_build((char *)Publish_payload);
       
-      /* パブリッシュコマンドの実行 */
-      if(execute(&publish_command) == API_STATUS_FAIL){ bg770_reset(); }
+        /* パブリッシュコマンドの実行 */
+        if(execute(&publish_command) == API_STATUS_FAIL){ bg770_reset(); }
 
-      /* サブスクライブ状態へ戻す */
-      if(execute(&subscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
+        /* サブスクライブ状態へ戻す */
+        if(execute(&subscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
 
-    } else {
-      /* サブスクライブデータ以外はエラーとして、リセット */
-      bg770_reset();
+      } else {
+        /* サブスクライブデータ以外はエラーとして、リセット */
+        bg770_reset();
+      }
     }
 
   }
@@ -94,7 +98,7 @@ uint16_t publish_payload_build(char buf[])
   buf[len++] = '{';
 
   /* message */
-  len += sprintf(&buf[len], "\"message\":\"Hello World!\"");
+  len += sprintf(&buf[len], "\"message\":\"Pico3からの挨拶\"");
 
   /* JSON close */
   buf[len++] = '}';
