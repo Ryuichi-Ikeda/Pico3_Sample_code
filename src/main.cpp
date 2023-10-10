@@ -50,6 +50,9 @@ void loop() {
       if(init_command_sequence_task() == API_STATUS_FAIL){ bg770_reset(); };
       delay(1);
     }
+    /* 緑LED点灯 */
+    LAN_GREEN_ON();
+    LAN_RED_OFF();
     Serial.println("Subscribe Start");
   }
 
