@@ -651,13 +651,28 @@ void split(String data, char delimiter, String *dst, uint8_t dst_index){
 /*************************************************************************************************/
 String RxData_Analize(String RxData){
 
-  /* 受信データを「,」で区分け */
-  String RxData_split[BG770_SUB_PAYLOAD_INDEX];
-  /* サブスクライブデータ内のペイロード部分を抽出 */
-  split(RxData,',',RxData_split,BG770_SUB_PAYLOAD_INDEX);
+    /* 受信データを「,」で区分け */
+    String RxData_split[BG770_SUB_PAYLOAD_INDEX];
+    /* サブスクライブデータ内のペイロード部分を抽出 */
+    split(RxData,',',RxData_split,BG770_SUB_PAYLOAD_INDEX);
 
-  return RxData_split[BG770_SUB_PAYLOAD_INDEX-1];
+    /*jsonドキュメントの作成*/
+    DynamicJsonDocument doc(200);
+    /*ペイロード部分からダブルクォーテーションを排除し、jsonデータ解析*/
+    DeserializationError error 
+    = deserializeJson(doc, RxData_split[BG770_SUB_PAYLOAD_INDEX - 1].substring(1, RxData_split[BG770_SUB_PAYLOAD_INDEX - 1].length()-1));
 
+    /*エラー解析*/
+    if (error) {
+      Serial.print(F("JSON parsing failed. Error code: "));
+      Serial.println(error.c_str());
+      return "";
+    }
+    
+    /*"message"キーの値をStringクラスのpayloadに格納*/
+    String payload = doc["message"].as<String>();
+
+    return payload;
 }
 
 /*************************************************************************************************/

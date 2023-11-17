@@ -50,8 +50,8 @@ void loop() {
       if(init_command_sequence_task() == API_STATUS_FAIL){ bg770_reset(); };
       delay(1);
     }
-    /* 緑LED点灯 */
-    LAN_GREEN_ON();
+    /* LED消灯 */
+    LAN_GREEN_OFF();
     LAN_RED_OFF();
     Serial.println("Subscribe Start");
   }
@@ -71,14 +71,24 @@ void loop() {
         String Subscribe_payload = RxData_Analize(RxData);
         Serial.println("Subscribe Payload[" + String(Subscribe_payload) + "]");
 
+        /*AWSからのデータが「RED」なら、LANの赤LEDを光らす。*/
+        if (Subscribe_payload.equals("RED")){
+          LAN_RED_ON();
+          LAN_GREEN_OFF();
+        }
+       /*AWSからのデータが「GREEN」なら、LANの緑LEDを光らす。*/
+        if (Subscribe_payload.equals("GREEN")){
+          LAN_RED_OFF();
+          LAN_GREEN_ON();
+        }
+      /*AWSからのデータが「RED」「GREEN」以外なら、LANのLEDを消す*/
+        if (!Subscribe_payload.equals("RED") && !Subscribe_payload.equals("GREEN")){
+          LAN_RED_OFF();
+          LAN_GREEN_OFF();
+        }            
+    
         /* サブスクライブの中止 */
         if(execute(&unsubscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
-      
-        /* サブスクライブに対する返事（パブリッシュ）の生成*/
-        Publish_length = publish_payload_build((char *)Publish_payload);
-      
-        /* パブリッシュコマンドの実行 */
-        if(execute(&publish_command) == API_STATUS_FAIL){ bg770_reset(); }
 
         /* サブスクライブ状態へ戻す */
         if(execute(&subscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
@@ -86,7 +96,7 @@ void loop() {
       } else {
         /* サブスクライブデータ以外はエラーとして、リセット */
         bg770_reset();
-      }
+      }                                        
     }
 
   }
