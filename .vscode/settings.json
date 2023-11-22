@@ -3,6 +3,7 @@
         "cstring": "cpp",
         "istream": "cpp",
         "ostream": "cpp",
-        "system_error": "cpp"
+        "system_error": "cpp",
+        "string": "cpp"
     }
 }

@@ -50,6 +50,8 @@
 #define PORT_UART0_TXD      1
 /** @brief 通信モジュールリセット ピン番号 */
 #define PORT_OUT_MODULE_RESET  18
+/** @brief Wifi設定 ピン番号 */
+#define PORT_VP_SENSOR  36
 
 /***************************************************************************************************
  * GLOBAL FUNCTIONS

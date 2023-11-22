@@ -16,6 +16,8 @@
 #include "bg770.h"
 #include "CK_1540_01.h"
 #include "setup_define.h"
+#include <WiFi.h>
+#include <WebServer.h>
 
 /***************************************************************************************************
  * LOCAL FUNCTIONS
@@ -26,6 +28,7 @@
  * @return 作成したペイロード長
  */
 uint16_t publish_payload_build(char buf[]);
+WebServer server(80);
 
 /**  Main setup **/
 void setup() {
@@ -36,6 +39,15 @@ void setup() {
   Serial.begin(115200);
   while (!Serial); 
   Serial.println("Starting Serial Monitor");
+
+  // アクセスポイントとしてESP32を設定
+  WiFi.softAP("Pico3_AP_Sample", "Photo036F");
+
+  IPAddress IP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(IP);
+
+  server.begin();
 
   /* bg770の初期化 */
   bg770_init();
@@ -56,65 +68,84 @@ void loop() {
     Serial.println("Subscribe Start");
   }
 
-  /* bg770からの受信待ち */
-  if(Serial1.available()) {
-    
-    /* データ受信 */
-    String RxData = bg770_RxDataGet();
-    
-    /* NULLは無視 */
-    if(RxData != ""){
-      /* サブスクライブした場合のBG770のレスポンス */
-      if(RxData.startsWith("+QMTRECV: 0")){
-        
-        /* 受信データの解析 */
-        String Subscribe_payload = RxData_Analize(RxData);
-        Serial.println("Subscribe Payload[" + String(Subscribe_payload) + "]");
+  WiFiClient client = server.available();   // クライアントが接続を待つ
 
-        /*AWSからのデータが「RED」なら、LANの赤LEDを光らす。*/
-        if (Subscribe_payload.equals("RED")){
-          LAN_RED_ON();
-          LAN_GREEN_OFF();
+  if (client) { // クライアントが接続した場合
+    String currentLine = ""; // 現在の行を保存するための文字列
+    String new_ssid = ""; // 新しいSSIDを保存するための文字列
+    String new_password = ""; // 新しいパスワードを保存するための文字列
+
+    while (client.connected()) { // クライアントが接続中の間ループ
+      if (client.available()) { // クライアントからデータが利用可能な場合
+        char c = client.read(); // クライアントから1文字読み込む
+        if (c == '\n') { // 改行文字が読み込まれた場合
+          if (currentLine.length() == 0) { // 現在の行が空の場合（HTTPリクエストの終わり）
+            client.println("HTTP/1.1 200 OK"); // HTTPレスポンスのステータスラインを送信
+            client.println("Content-type:text/html"); // HTTPレスポンスのヘッダーを送信
+            client.println(); // 空行を送信してヘッダーの終わりを示す
+            Serial.println(currentLine);
+            Serial.println(new_ssid);
+            Serial.println(new_password);
+
+            client.println("<!DOCTYPE html><html>"); // HTMLの開始タグを送信
+            client.println("<body><form method=\"post\">"); // フォームの開始タグを送信
+            client.println("SSID:<br><select name=\"ssid\">"); // SSIDを選択するためのセレクトボックスを作成
+            Serial.println(currentLine);
+            Serial.println(new_ssid);
+            Serial.println(new_password);
+
+            int n = WiFi.scanNetworks(); // 利用可能なネットワークをスキャン
+            for (int i = 0; i < n; ++i) { // 各ネットワークに対して
+              client.println("<option value=\"" + WiFi.SSID(i) + "\">" + WiFi.SSID(i) + "</option>"); // オプションタグを送信
+            }
+
+            client.println("</select><br>"); // セレクトボックスの終了タグを送信
+            client.println("Password:<br><input type=\"text\" name=\"password\"><br><br>"); // パスワードを入力するためのテキストボックスを作成
+            client.println("<input type=\"submit\" value=\"Submit\">"); // 送信ボタンを作成
+            client.println("</form></body></html>"); // フォームとHTMLの終了タグを送信
+            client.println(); // 空行を送信してレスポンスの終わりを示す
+            
+            Serial.println(currentLine);
+            Serial.println(new_ssid);
+            Serial.println(new_password);
+            break; // whileループを抜ける
+          } else { // 現在の行が空でない場合（HTTPリクエストの本文を処理）
+            currentLine = currentLine.substring(currentLine.indexOf(':') + 1); // コロンの後の文字列を取得
+            if (currentLine.startsWith("ssid=")) { // 現在の行が"ssid="で始まる場合
+              new_ssid = currentLine.substring(5); // "ssid="の後の文字列を新しいSSIDとして保存
+            } else if (currentLine.startsWith("password=")) { // 現在の行が"password="で始まる場合
+              new_password = currentLine.substring(9); // "password="の後の文字列を新しいパスワードとして保存
+            }
+            currentLine = ""; // 現在の行を空にする
+            
+            Serial.println(currentLine);
+            Serial.println(new_ssid);
+            Serial.println(new_password);
+          }
+        } else if (c != '\r') { // 改行文字でない場合
+          currentLine += c; // 現在の行に読み込んだ文字を追加
         }
-       /*AWSからのデータが「GREEN」なら、LANの緑LEDを光らす。*/
-        if (Subscribe_payload.equals("GREEN")){
-          LAN_RED_OFF();
-          LAN_GREEN_ON();
-        }
-      /*AWSからのデータが「RED」「GREEN」以外なら、LANのLEDを消す*/
-        if (!Subscribe_payload.equals("RED") && !Subscribe_payload.equals("GREEN")){
-          LAN_RED_OFF();
-          LAN_GREEN_OFF();
-        }            
-    
-        /* サブスクライブの中止 */
-        if(execute(&unsubscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
-
-        /* サブスクライブ状態へ戻す */
-        if(execute(&subscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
-
-      } else {
-        /* サブスクライブデータ以外はエラーとして、リセット */
-        bg770_reset();
-      }                                        
+      }
     }
 
+    client.stop(); // クライアントとの接続を閉じる
+    
+            Serial.println(currentLine);
+            Serial.println(new_ssid);
+            Serial.println(new_password);
+    Serial.println("client stop");
+
+    if (new_ssid != "" && new_password != "") { // 新しいSSIDとパスワードが設定されている場合
+      WiFi.begin(new_ssid.c_str(), new_password.c_str()); // 新しいSSIDとパスワードでWiFiに接続
+      while (WiFi.status() != WL_CONNECTED) { // WiFiに接続するまで待機
+        delay(500); // 0.5秒待つ
+        Serial.println("Connecting to WiFi..."); // "Connecting to WiFi..."とシリアルに出力
+      }
+      if(WiFi.status() == WL_CONNECTED) { // WiFiに接続した場合
+        Serial.println("Connected to the WiFi network"); // "Connected to the WiFi network"とシリアルに出力
+      } else { // WiFiに接続できなかった場合
+        Serial.println("Failed to connect to the WiFi network"); // "Failed to connect to the WiFi network"とシリアルに出力
+      }
+    }
   }
-
-}
-
-/*************************************************************************************************/
-uint16_t publish_payload_build(char buf[])
-{
-  uint16_t len = 0;
-  /* JSON open */
-  buf[len++] = '{';
-
-  /* message */
-  len += sprintf(&buf[len], "\"message\":\"Pico3からの挨拶\"");
-
-  /* JSON close */
-  buf[len++] = '}';
-
-  return len;
 }
