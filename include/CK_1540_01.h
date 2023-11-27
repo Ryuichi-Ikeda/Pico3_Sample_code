@@ -8,6 +8,7 @@
 #define CK_1540_01_H
 
 #include <Arduino.h>
+#include <WebServer.h>
 
 /***************************************************************************************************
  * CONSTANTS
@@ -50,14 +51,14 @@
 #define PORT_UART0_TXD      1
 /** @brief 通信モジュールリセット ピン番号 */
 #define PORT_OUT_MODULE_RESET  18
-/** @brief Wifi設定 ピン番号 */
-#define PORT_VP_SENSOR  36
 
 /***************************************************************************************************
  * GLOBAL FUNCTIONS
  */
 /** @brief GPIO初期化 **/
 void initGPIO();
+/** @brief wifi初期化 **/
+void initWifi();
 /** @brief BG770リセット（負論理) **/
 void BG770_RESET_ON();
 void BG770_RESET_OFF(); 
@@ -80,6 +81,8 @@ void WAN_RED_OFF();
  * @param[in] msec ：点滅時間（Duty50％固定）
  */
 void LAN_RED_FLA(uint16_t time, uint16_t msec);
+
+extern WebServer server;
 
 /**************************************************************************************************/
 #endif
