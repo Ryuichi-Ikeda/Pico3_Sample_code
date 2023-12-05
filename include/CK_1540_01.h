@@ -75,6 +75,14 @@ void WAN_GREEN_ON();
 void WAN_GREEN_OFF();
 void WAN_RED_ON();
 void WAN_RED_OFF();
+/*ハンドラ設定*/
+void handleRoot(void);
+void handleWifi(void);
+void handleLed(void);
+void handleRedLedOn(void);
+void handleGreenLedOn(void);
+void handleLedOff(void);
+void sendErrorPage(String);
 /**
  * @brief LAN赤LED点滅関数
  * @param[in] time ：点滅回数
