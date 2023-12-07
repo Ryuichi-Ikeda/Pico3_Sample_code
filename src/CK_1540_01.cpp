@@ -1,7 +1,10 @@
 /**
  * @file   CK_1540_01.cpp
  * @brief  このファイルはCK-1540-01基板の設定ライブラリです。
- * @author KOHEI Iefuji
+ * 
+ * @author Iefuji Kohei (iefuji.kohei@kyokko.co.jp)
+ * @date 2023-10-10
+ * @copyright Copyright (c) 2023 旭光電機株式会社
  * @{
  */
 

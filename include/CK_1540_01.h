@@ -1,8 +1,10 @@
 /**
  * @file   CK_1540_01.h
  * @brief  CK-1540-01ポートライブラリ
- * @author KOHEI Iefuji
- * @{
+ * 
+ * @author Iefuji Kohei (iefuji.kohei@kyokko.co.jp)
+ * @date 2023-10-10
+ * @copyright Copyright (c) 2023 旭光電機株式会社
  */
 #ifndef CK_1540_01_H
 #define CK_1540_01_H
