@@ -18,6 +18,7 @@
 #include "setup_define.h"
 #include <WiFi.h>
 #include <WebServer.h>
+#include "ArduinoJson.h"
 
 /***************************************************************************************************
  * LOCAL FUNCTIONS
@@ -29,34 +30,87 @@
  */
 
 WebServer server(80);
+uint16_t publish_payload_build(char buf[],String command);
 
 /**  Main setup **/
 void setup() {
   /* GPIOの初期化 */
   initGPIO();
-  Serial.println("complete initGPIO");
   /* シリアル通信の初期化（デバッグ用） */
   Serial.begin(115200);
   while (!Serial); 
   Serial.println("Starting Serial Monitor");
-  Serial.println("Please fill in the command");
+
+  bg770_init();
 }
 /**  Main loop **/
 void loop() {
   static unsigned long pressedTime = 0;
   static bool isPressed = false;
+  String jsonString;
+  String command;
+  String color;
+  String SW;
+  StaticJsonDocument<200> doc;
 
-  String input;
+  if(bg_state == BG770_STATE_INIT_COMMAND_SEQUENCE){
+   while(bg_state != BG770_STATE_SUBSCRIBE){
+     if(init_command_sequence_task() == API_STATUS_FAIL){ bg770_reset(); };
+     delay(1);
+   }
+   Serial.println("Subscribe Start");
+  }
 
-  if (Serial.available()) {
-    input = Serial.readStringUntil('\n');
-    String command = input.substring(0, 3);
-    String color = input.substring(3);
+   if (command.length() == 0) {
+    Serial.println("Please enter a command");
+    while (!Serial.available()) {
+      delay(100); // データが利用可能になるまで待機
+    }
+    command = Serial.readStringUntil('\n');
+    doc["command"] = command; // JSON形式のcommandに格納
+  }
+    if (command == "002") {
+      if(digitalRead(PORT_INP_SW) == 0){
+        doc["command"] = command;
+        doc["SW"] = "ON";
+      }
+      if(digitalRead(PORT_INP_SW) == 1){
+        doc["command"] = command;
+        doc["SW"] = "OFF";
+      }
+      serializeJson(doc,jsonString);
+      serializeJson(doc,Serial);
+      Publish_length = publish_payload_build((char *)Publish_payload,jsonString);
+      if(execute(&unsubscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
+      if(execute(&publish_command) == API_STATUS_FAIL){ bg770_reset(); }
+
+      command = ""; // コマンドをリセットして、次の入力を待つ
+      return;
+    }
+
+  if (color.length() == 0) {
+    Serial.println("Please enter a color");
+    while (!Serial.available()) {
+      delay(100); // データが利用可能になるまで待機
+    }
+    color = Serial.readStringUntil('\n');
+    doc["color"] = color; // JSON形式のcolorに格納
+  }
+  // コマンドと色が両方とも入力されたら、判別を行う
+  serializeJson(doc, jsonString);
+  serializeJson(doc,Serial);
+  if (command.length() > 0 && color.length() > 0) {
+    Publish_length = publish_payload_build((char *)Publish_payload,jsonString);
+    if(execute(&unsubscribe_command) == API_STATUS_FAIL){ bg770_reset(); }
+    if(execute(&publish_command) == API_STATUS_FAIL){ bg770_reset(); }
+
     if (command.equals("000")) {
       if (color.equals("RED")) {
         LAN_RED_ON();
+        LAN_GREEN_OFF();
       } else if (color.equals("GREEN")) {
         LAN_GREEN_ON();
+        LAN_RED_OFF();
       }
       else{
         LAN_RED_OFF();
@@ -66,17 +120,19 @@ void loop() {
     else if (command.equals("001")) {
       if (color.equals("RED")) {
         WAN_RED_ON();
+        WAN_GREEN_OFF();
       } else if (color.equals("GREEN")) {
         WAN_GREEN_ON();
+        WAN_RED_OFF();
       }
       else{
         WAN_RED_OFF();
         WAN_GREEN_OFF();
       }
     }
-    else if (command.equals("002")) {
-      Serial.println("002 " + String(digitalRead(PORT_INP_SW)));
-    }
+    // 判別が終わったら、コマンドと色をリセット
+    command = "";
+    color = "";
   }
   if (digitalRead(PORT_INP_SW) == LOW) { 
         if (!isPressed) { 
@@ -90,4 +146,13 @@ void loop() {
         isPressed = false;
     }
   server.handleClient();
+}
+
+uint16_t publish_payload_build(char* buf,String jsonString)
+{
+  uint16_t len = 0;
+  /* message */
+  len += sprintf(buf,"%s",jsonString.c_str());
+  
+  return len;
 }
